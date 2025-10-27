@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 	"weblooter/helheim/internal/entity"
+	"weblooter/helheim/internal/grpc"
 	"weblooter/helheim/internal/service/scanner"
 
 	"github.com/fatih/color"
@@ -14,12 +15,14 @@ import (
 
 var flagScanIntervalSec uint
 var flagScanDir string
+var flagServerAddr string
 var flagDebugMode bool
 
 func init() {
 	flag.UintVar(&flagScanIntervalSec, "interval", 30, `Длительность перерыва между повторным сканированием структуры в секундах.
 Чем реже меняется структура, тем длительней должен быть интервал.`)
 	flag.StringVar(&flagScanDir, "dir", "", `Директория, которая подлежит сконированию и синхронизации.`)
+	flag.StringVar(&flagServerAddr, "serverAddr", "127.0.0.1:50051", `Адрес получателя (gRPC server) в формате "HOST:PORT".`)
 	flag.BoolVar(&flagDebugMode, "vv", false, `Включить режим дебага`)
 	flag.Parse()
 }
@@ -44,6 +47,11 @@ func main() {
 		log.Printf("Директория синхронизации: %v\n\n", flagScanDir)
 	}
 
+	helheimClient, err := grpc.NewHelheimClient(flagServerAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	scan := scanner.NewScanner(flagScanDir)
 	scan.SetBaseState(make(entity.FilesStruct)) // TODO получить изменения с recipient и положить их как базовое состояние
 
@@ -53,7 +61,7 @@ func main() {
 		}
 
 		// Запуск сканирования
-		err := scan.Rescan()
+		err = scan.Rescan()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -78,13 +86,18 @@ func main() {
 					}
 				}
 
-				// TODO Отправить запрос на совершение действия получателю
-				//for filepathHash, file := range files {
-				for filepathHash, _ := range files {
+				for filepathHash, file := range files {
+
+					err = helheimClient.UploadFile(flagScanDir, action, *file)
+					if err != nil {
+						log.Fatal(err)
+					}
+
 					err = scan.CommitFile(action, filepathHash)
 					if err != nil {
 						log.Fatal(err)
 					}
+					return // TODO удалить после дебага
 				}
 			}
 		}

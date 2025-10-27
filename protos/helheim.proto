@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "weblooter/helheim/protos";
+option go_package = "weblooter/helheim/gen";
 
 service Helheim {
   rpc UploadFile(stream UploadFileChunkRequest) returns (UploadFileResponse);
@@ -19,11 +19,12 @@ enum FileActionEnum {
 message UploadFileChunkRequest {
   FileActionEnum action = 1;
   string filepath = 2;
-  bytes chunk_content = 3;
-  int64 chunk_index = 4;
-  int64 total_chunks = 5;
-  string chunk_hash_sum = 6;
-  string file_hash_sum = 7;
+  int64 size = 3;
+  bytes chunk_content = 4;
+  int64 chunk_index = 5;
+  int64 total_chunks = 6;
+  string chunk_hash_sum = 7;
+  string file_hash_sum = 8;
 }
 
 message UploadFileResponse {
