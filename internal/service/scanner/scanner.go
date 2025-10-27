@@ -3,13 +3,13 @@ package scanner
 import (
 	"crypto/sha256"
 	"fmt"
-	"helheim/internal/entity"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+	"weblooter/helheim/internal/entity"
 )
 
 type Scanner struct {

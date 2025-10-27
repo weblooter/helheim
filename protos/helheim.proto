@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "weblooter/helheim/protos";
+
+service Helheim {
+  rpc UploadFile(stream UploadFileChunkRequest) returns (UploadFileResponse);
+  rpc GetState(GetStateRequest) returns (GetStateResponse);
+}
+
+enum FileActionEnum {
+  ACTION__UNKNOWN = 0;
+  ACTION_CREATE = 1;
+  ACTION_UPDATE = 2;
+  ACTION_DELETE = 3;
+}
+
+message UploadFileChunkRequest {
+  FileActionEnum action = 1;
+  string filepath = 2;
+  bytes chunk_content = 3;
+  int64 chunk_index = 4;
+  int64 total_chunks = 5;
+  string chunk_hash_sum = 6;
+  string file_hash_sum = 7;
+}
+
+message UploadFileResponse {
+  bool done = 1;
+  optional string error = 2;
+}
+
+message GetStateRequest {
+
+}
+message GetStateResponse {
+  map <string, GetStateResponseItem> files = 1;
+}
+
+message GetStateResponseItem {
+  string filepath = 1;
+  int64 size = 2;
+  string content_hash_sum = 3;
+  google.protobuf.Timestamp last_modified = 4;
+}
