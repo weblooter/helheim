@@ -47,14 +47,14 @@ func (g *HelheimClient) UploadFile(scanDir string, action entity.FileAction, fil
 		// Запрос на удаление файла. Отправим пустые данные
 		//  с признаком удаления.
 		req := &gen.UploadFileChunkRequest{
-			Action:       gen.FileActionEnum_ACTION_DELETE,
-			Filepath:     file.Filepath,
-			Size:         int64(file.Size),
-			ChunkContent: []byte{},
-			ChunkIndex:   0,
-			TotalChunks:  0,
-			ChunkHashSum: "",
-			FileHashSum:  "",
+			Action:   gen.FileActionEnum_ACTION_DELETE,
+			Filepath: file.Filepath,
+			//Size:         int64(file.Size),
+			//ChunkContent: []byte{},
+			//ChunkIndex:   0,
+			//TotalChunks:  0,
+			//ChunkHashSum: "",
+			//FileHashSum:  "",
 		}
 		if err := stream.Send(req); err != nil {
 			return fmt.Errorf("UploadFile failed to send chunk: %v", err)
@@ -85,6 +85,7 @@ func (g *HelheimClient) UploadFile(scanDir string, action entity.FileAction, fil
 		buffer := make([]byte, g.chunkSize)
 		chunkIndex := int64(0)
 		for {
+			chunkIndex++
 			n, err := f.Read(buffer)
 			if err == io.EOF {
 				break
@@ -118,9 +119,29 @@ func (g *HelheimClient) UploadFile(scanDir string, action entity.FileAction, fil
 		return fmt.Errorf("UploadFile close stream failed: %v", err)
 	}
 
-	if resp.Error != nil && *resp.Error != "" {
-		return fmt.Errorf("UploadFile resp error: %v", *resp.Error)
+	if resp.Error != "" {
+		return fmt.Errorf("UploadFile resp error: %v", resp.Error)
 	}
 
 	return nil
+}
+
+// GetState
+func (g *HelheimClient) GetState() (entity.FilesStruct, error) {
+	req := &gen.GetStateRequest{}
+	resp, err := g.client.GetState(context.Background(), req)
+	if err != nil {
+		return entity.FilesStruct{}, fmt.Errorf("HelheimClient GetState call failed: %v", err)
+	}
+
+	state := entity.FilesStruct{}
+	for h, f := range resp.Files {
+		state[h] = &entity.File{
+			Filepath:     f.Filepath,
+			Size:         uint(f.Size),
+			LastModified: f.LastModified.AsTime().UTC(),
+			HashSum:      f.ContentHashSum,
+		}
+	}
+	return state, nil
 }

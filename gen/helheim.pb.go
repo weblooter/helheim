@@ -177,7 +177,7 @@ func (x *UploadFileChunkRequest) GetFileHashSum() string {
 type UploadFileResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Done          bool                   `protobuf:"varint,1,opt,name=done,proto3" json:"done,omitempty"`
-	Error         *string                `protobuf:"bytes,2,opt,name=error,proto3,oneof" json:"error,omitempty"`
+	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -220,8 +220,8 @@ func (x *UploadFileResponse) GetDone() bool {
 }
 
 func (x *UploadFileResponse) GetError() string {
-	if x != nil && x.Error != nil {
-		return *x.Error
+	if x != nil {
+		return x.Error
 	}
 	return ""
 }
@@ -388,11 +388,10 @@ const file_helheim_proto_rawDesc = "" +
 	"chunkIndex\x12!\n" +
 	"\ftotal_chunks\x18\x06 \x01(\x03R\vtotalChunks\x12$\n" +
 	"\x0echunk_hash_sum\x18\a \x01(\tR\fchunkHashSum\x12\"\n" +
-	"\rfile_hash_sum\x18\b \x01(\tR\vfileHashSum\"M\n" +
+	"\rfile_hash_sum\x18\b \x01(\tR\vfileHashSum\">\n" +
 	"\x12UploadFileResponse\x12\x12\n" +
-	"\x04done\x18\x01 \x01(\bR\x04done\x12\x19\n" +
-	"\x05error\x18\x02 \x01(\tH\x00R\x05error\x88\x01\x01B\b\n" +
-	"\x06_error\"\x11\n" +
+	"\x04done\x18\x01 \x01(\bR\x04done\x12\x14\n" +
+	"\x05error\x18\x02 \x01(\tR\x05error\"\x11\n" +
 	"\x0fGetStateRequest\"\x97\x01\n" +
 	"\x10GetStateResponse\x122\n" +
 	"\x05files\x18\x01 \x03(\v2\x1c.GetStateResponse.FilesEntryR\x05files\x1aO\n" +
@@ -460,7 +459,6 @@ func file_helheim_proto_init() {
 	if File_helheim_proto != nil {
 		return
 	}
-	file_helheim_proto_msgTypes[1].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

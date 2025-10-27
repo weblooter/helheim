@@ -21,7 +21,7 @@ var flagDebugMode bool
 func init() {
 	flag.UintVar(&flagScanIntervalSec, "interval", 30, `Длительность перерыва между повторным сканированием структуры в секундах.
 Чем реже меняется структура, тем длительней должен быть интервал.`)
-	flag.StringVar(&flagScanDir, "dir", "", `Директория, которая подлежит сконированию и синхронизации.`)
+	flag.StringVar(&flagScanDir, "dir", "", `Директория, которая подлежит сканированию.`)
 	flag.StringVar(&flagServerAddr, "serverAddr", "127.0.0.1:50051", `Адрес получателя (gRPC server) в формате "HOST:PORT".`)
 	flag.BoolVar(&flagDebugMode, "vv", false, `Включить режим дебага`)
 	flag.Parse()
@@ -44,7 +44,7 @@ func main() {
 
 	if flagDebugMode {
 		log.Printf("Интервал сканирования: %v секунд.\n", flagScanIntervalSec)
-		log.Printf("Директория синхронизации: %v\n\n", flagScanDir)
+		log.Printf("Директория сканирования: %v\n\n", flagScanDir)
 	}
 
 	helheimClient, err := grpc.NewHelheimClient(flagServerAddr)
@@ -53,7 +53,12 @@ func main() {
 	}
 
 	scan := scanner.NewScanner(flagScanDir)
-	scan.SetBaseState(make(entity.FilesStruct)) // TODO получить изменения с recipient и положить их как базовое состояние
+
+	recipientState, err := helheimClient.GetState()
+	if err != nil {
+		log.Fatal(err)
+	}
+	scan.SetBaseState(recipientState)
 
 	for {
 		if flagDebugMode {
@@ -97,10 +102,10 @@ func main() {
 					if err != nil {
 						log.Fatal(err)
 					}
-					return // TODO удалить после дебага
 				}
 			}
 		}
+		return // TODO удалить после дебага
 
 		time.Sleep(time.Duration(flagScanIntervalSec) * time.Second)
 	}

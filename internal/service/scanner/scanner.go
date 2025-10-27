@@ -39,6 +39,11 @@ func (s *Scanner) SetBaseState(state entity.FilesStruct) {
 	s.state = state
 }
 
+// GetState возвращает структуру
+func (s *Scanner) GetState() entity.FilesStruct {
+	return s.state
+}
+
 // Rescan
 func (s *Scanner) Rescan() error {
 	s.lastProcessedFiles = []string{}
