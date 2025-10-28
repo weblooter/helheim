@@ -5,15 +5,14 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
 	"path/filepath"
 	"sync"
 	"weblooter/helheim/gen"
+	"weblooter/helheim/internal/assistant/message"
 	"weblooter/helheim/internal/service/scanner"
 
-	"github.com/fatih/color"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -91,19 +90,24 @@ func (s *HelheimServer) UploadFile(stream gen.Helheim_UploadFileServer) error {
 		req, err := stream.Recv()
 		if err == io.EOF {
 			// Пришел признак окончания стрима.
+			if s.isDebugMode {
+				fmt.Println()
+			}
 			switch {
 			case *action == gen.FileActionEnum_ACTION_DELETE:
 				// Стрим был на удаление. Удалим файл.
 				f, err := os.Open(fmt.Sprintf("%s%s", s.syncDir, *chunkFilepath))
 				if err != nil {
+					message.ThrowFatal(err.Error())
 					return err
 				}
 				err = os.Remove(f.Name())
 				if err != nil {
+					message.ThrowFatal(err.Error())
 					return err
 				}
 				if s.isDebugMode {
-					log.Println(color.New(color.FgCyan).Sprintf("Файл \"%s\" удален.\n", *chunkFilepath))
+					message.InfoF("Файл \"%s\" удален.\n", *chunkFilepath)
 				}
 
 			case *action == gen.FileActionEnum_ACTION_CREATE || *action == gen.FileActionEnum_ACTION_UPDATE:
@@ -112,58 +116,76 @@ func (s *HelheimServer) UploadFile(stream gen.Helheim_UploadFileServer) error {
 
 				// Сверим корректность данных
 				if lastChunkIndex != totalChunks {
-					return fmt.Errorf("number of the last chunk is #%d, but it must be #%d", lastChunkIndex, totalChunks)
+					err = fmt.Errorf("number of the last chunk is #%d, but it must be #%d", lastChunkIndex, totalChunks)
+					message.ThrowFatal(err.Error())
+					return err
 				}
 				if fmt.Sprintf("%x", tmpFileContentHash.Sum(nil)) != fileContentHashSum {
-					return fmt.Errorf("file content hash sum does not match")
+					err = fmt.Errorf("file content hash does not match")
+					message.ThrowFatal(err.Error())
+					return err
 				}
 
 				finalFilepath := fmt.Sprintf("%s%s", s.syncDir, *chunkFilepath)
 				if *action == gen.FileActionEnum_ACTION_CREATE {
 					// Создадим файл
 					if _, err := os.Stat(finalFilepath); os.IsExist(err) {
-						return fmt.Errorf("file %s already exists", *chunkFilepath)
+						err = fmt.Errorf("file %s already exists", *chunkFilepath)
+						message.ThrowFatal(err.Error())
+						return err
 					}
 
 					if _, err := os.Stat(filepath.Dir(finalFilepath)); os.IsNotExist(err) {
 						if err := os.MkdirAll(filepath.Dir(finalFilepath), 0755); err != nil {
-							return fmt.Errorf("failed to create directory %s: %v", filepath.Dir(finalFilepath), err)
+							err = fmt.Errorf("failed to create directory %s: %v", filepath.Dir(finalFilepath), err)
+							message.ThrowFatal(err.Error())
+							return err
 						}
 					}
 
 					err := os.Rename(tmpF.Name(), finalFilepath)
 					if err != nil {
-						return fmt.Errorf("rename file failed: %v", err)
+						err = fmt.Errorf("rename file failed: %v", err)
+						message.ThrowFatal(err.Error())
+						return err
 					}
 					if s.isDebugMode {
-						log.Println(color.New(color.FgCyan).Sprintf("Файл \"%s\" создан.\n", *chunkFilepath))
+						message.InfoF("Файл \"%s\" создан.\n", *chunkFilepath)
 					}
 				} else if *action == gen.FileActionEnum_ACTION_UPDATE {
 					// Обновим файл
 					if _, err := os.Stat(finalFilepath); os.IsNotExist(err) {
-						return fmt.Errorf("file %s not exists", *chunkFilepath)
+						err = fmt.Errorf("file %s not exists", *chunkFilepath)
+						message.ThrowFatal(err.Error())
+						return err
 					}
 
 					// Откроем финальный файл (обнуляет если уже был создан)
 					dstF, err := os.Create(finalFilepath)
 					if err != nil {
-						return fmt.Errorf("create file failed: %v", err)
+						err = fmt.Errorf("create file failed: %v", err)
+						message.ThrowFatal(err.Error())
+						return err
 					}
 					defer dstF.Close()
 
 					// Переместим курсор временного файла в начало
 					_, err = tmpF.Seek(0, io.SeekStart)
 					if err != nil {
-						return fmt.Errorf("seek file failed: %v", err)
+						err = fmt.Errorf("seek file failed: %v", err)
+						message.ThrowFatal(err.Error())
+						return err
 					}
 
 					// Перемещаем содержимое
 					_, err = io.Copy(dstF, tmpF)
 					if err != nil {
-						return fmt.Errorf("copy file failed: %v", err)
+						err = fmt.Errorf("copy file failed: %v", err)
+						message.ThrowFatal(err.Error())
+						return err
 					}
 					if s.isDebugMode {
-						log.Println(color.New(color.FgCyan).Sprintf("Файл \"%s\" обновлен.\n", *chunkFilepath))
+						message.InfoF("Файл \"%s\" обновлен.\n", *chunkFilepath)
 					}
 
 				}
@@ -203,17 +225,15 @@ func (s *HelheimServer) UploadFile(stream gen.Helheim_UploadFileServer) error {
 		lastChunkIndex = req.ChunkIndex
 
 		if s.isDebugMode {
-			col := &color.Color{}
+			mgs := fmt.Sprintf("Filepath: %v, ChunkIndex: %v, TotalChunks: %v", *chunkFilepath, req.ChunkIndex, req.TotalChunks)
 			switch *action {
 			case gen.FileActionEnum_ACTION_DELETE:
-				col = color.New(color.FgRed)
+				message.FlushDanger(mgs)
 			case gen.FileActionEnum_ACTION_UPDATE:
-				col = color.New(color.FgYellow)
+				message.FlushWarning(mgs)
 			case gen.FileActionEnum_ACTION_CREATE:
-				col = color.New(color.FgGreen)
+				message.FlushSuccess(mgs)
 			}
-
-			log.Println(col.Sprintf("Filepath: %v, ChunkIndex: %v, TotalChunks: %v", *chunkFilepath, req.ChunkIndex, req.TotalChunks))
 		}
 
 		// Если приходят запросы на создание или обновление, то нужну

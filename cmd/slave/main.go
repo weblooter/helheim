@@ -3,11 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+	"weblooter/helheim/internal/assistant/message"
 	"weblooter/helheim/internal/grpc"
 )
 
@@ -28,20 +28,21 @@ func main() {
 	flagSyncDir = strings.TrimSpace(flagSyncDir)
 	switch {
 	case flagSyncDir == "":
-		fmt.Fprintln(os.Stderr, "Не задана директория для синхронизации. Используйте --help для получения детальной информации.")
+		message.ThrowFatal("Не задана директория для синхронизации. Используйте --help для получения детальной информации.")
 		os.Exit(1)
 	case flagSyncDir == "." || flagSyncDir == "./" || flagSyncDir == ".." || flagSyncDir == "../":
-		fmt.Fprintln(os.Stderr, "Мы выступаем решильно против синхронизации от текущей директории (./) или от директории уровнем выше (../)")
+		message.ThrowFatal("Мы выступаем решильно против синхронизации от текущей директории (./) или от директории уровнем выше (../)")
 		os.Exit(1)
 	}
 	if flagButchSize < 1 {
-		fmt.Fprintln(os.Stderr, "Размер батча не может быть менее 1 МБ")
+		message.ThrowFatal("Размер батча не может быть менее 1 МБ")
 		os.Exit(1)
 	}
 
 	if flagDebugMode {
-		log.Printf("Директория синхронизации: %v\n", flagSyncDir)
-		log.Printf("Размер батча: %v МБ (выделим gRPC серверу +5МБ)\n\n", flagButchSize)
+		message.DebugF("Директория синхронизации: %v\n", flagSyncDir)
+		message.DebugF("Размер батча: %v МБ (выделим gRPC серверу +5МБ)\n", flagButchSize)
+		fmt.Println()
 	}
 
 	sigs := make(chan os.Signal, 1)
@@ -54,14 +55,16 @@ func main() {
 
 	helheimServer, err := grpc.NewHelheimServer(flagPort, flagSyncDir, flagDebugMode, flagButchSize)
 	if err != nil {
-		log.Fatal(err)
+		message.ThrowFatal(err.Error())
+		os.Exit(1)
 	}
 	defer helheimServer.Defer()
 
 	go func() {
 		err = helheimServer.Run()
 		if err != nil {
-			log.Fatal(err)
+			message.ThrowFatal(err.Error())
+			os.Exit(1)
 		}
 	}()
 
