@@ -20,7 +20,7 @@ type HelheimClient struct {
 }
 
 // NewHelheimClient получить новый экземпляр клиента
-func NewHelheimClient(serverAddr string) (*HelheimClient, error) {
+func NewHelheimClient(serverAddr string, butchSize int) (*HelheimClient, error) {
 	conn, err := grpc.NewClient(serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("grpc NewHelheimClient connect failed: %v", err)
@@ -29,7 +29,7 @@ func NewHelheimClient(serverAddr string) (*HelheimClient, error) {
 	g := &HelheimClient{
 		conn:      conn,
 		client:    gen.NewHelheimClient(conn),
-		chunkSize: 1024 * 1024,
+		chunkSize: 1024 * 1024 * int64(butchSize),
 	}
 	return g, nil
 }
@@ -49,12 +49,6 @@ func (g *HelheimClient) UploadFile(scanDir string, action entity.FileAction, fil
 		req := &gen.UploadFileChunkRequest{
 			Action:   gen.FileActionEnum_ACTION_DELETE,
 			Filepath: file.Filepath,
-			//Size:         int64(file.Size),
-			//ChunkContent: []byte{},
-			//ChunkIndex:   0,
-			//TotalChunks:  0,
-			//ChunkHashSum: "",
-			//FileHashSum:  "",
 		}
 		if err := stream.Send(req); err != nil {
 			return fmt.Errorf("UploadFile failed to send chunk: %v", err)

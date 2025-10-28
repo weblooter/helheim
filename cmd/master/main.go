@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 	"weblooter/helheim/internal/entity"
@@ -16,6 +17,7 @@ import (
 var flagScanIntervalSec uint
 var flagScanDir string
 var flagServerAddr string
+var flagButchSize int
 var flagDebugMode bool
 
 func init() {
@@ -24,41 +26,48 @@ func init() {
 	flag.StringVar(&flagScanDir, "dir", "", `Директория, которая подлежит сканированию.`)
 	flag.StringVar(&flagServerAddr, "serverAddr", "127.0.0.1:50051", `Адрес получателя (gRPC server) в формате "HOST:PORT".`)
 	flag.BoolVar(&flagDebugMode, "vv", false, `Включить режим дебага`)
+	flag.IntVar(&flagButchSize, "butchSize", 5, `Размер батчей в МБ при отправке в slave.`)
 	flag.Parse()
 }
 
 func main() {
 	if flagScanIntervalSec == 0 {
-		fmt.Println("Интервал не может быть короче 1 секунды.")
-		return
+		fmt.Fprintln(os.Stderr, "Интервал не может быть короче 1 секунды.")
+		os.Exit(1)
 	}
 	flagScanDir = strings.TrimSpace(flagScanDir)
 	switch {
 	case flagScanDir == "":
-		fmt.Println("Не задана директория для сканирования. Используйте --help для получения детальной информации.")
+		fmt.Fprintln(os.Stderr, "Не задана директория для сканирования. Используйте --help для получения детальной информации.")
+		os.Exit(1)
 		return
 	case flagScanDir == "." || flagScanDir == "./" || flagScanDir == ".." || flagScanDir == "../":
-		fmt.Println("Мы выступаем решильно против скинирования от текущей директории (./) или от директории уровнем выше (../)")
-		return
+		fmt.Fprintln(os.Stderr, "Мы выступаем решильно против скинирования от текущей директории (./) или от директории уровнем выше (../)")
+		os.Exit(1)
+	}
+	if flagButchSize < 1 {
+		fmt.Fprintln(os.Stderr, "Размер батча не может быть менее 1 МБ")
+		os.Exit(1)
 	}
 
 	if flagDebugMode {
 		log.Printf("Интервал сканирования: %v секунд.\n", flagScanIntervalSec)
-		log.Printf("Директория сканирования: %v\n\n", flagScanDir)
+		log.Printf("Директория сканирования: %v\n", flagScanDir)
+		log.Printf("Размер батча: %v МБ\n\n", flagButchSize)
 	}
 
-	helheimClient, err := grpc.NewHelheimClient(flagServerAddr)
+	helheimClient, err := grpc.NewHelheimClient(flagServerAddr, flagButchSize)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	scan := scanner.NewScanner(flagScanDir)
 
-	recipientState, err := helheimClient.GetState()
+	slaveState, err := helheimClient.GetState()
 	if err != nil {
 		log.Fatal(err)
 	}
-	scan.SetBaseState(recipientState)
+	scan.SetBaseState(slaveState)
 
 	for {
 		if flagDebugMode {
@@ -105,7 +114,6 @@ func main() {
 				}
 			}
 		}
-		return // TODO удалить после дебага
 
 		time.Sleep(time.Duration(flagScanIntervalSec) * time.Second)
 	}

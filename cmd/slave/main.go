@@ -4,7 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"weblooter/helheim/internal/grpc"
 )
 
@@ -34,13 +37,26 @@ func main() {
 		log.Printf("Директория синхронизации: %v\n\n", flagSyncDir)
 	}
 
+	sigs := make(chan os.Signal, 1)
+	exit := make(chan bool, 1)
+	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigs
+		exit <- true
+	}()
+
 	helheimServer, err := grpc.NewHelheimServer(flagPort, flagSyncDir, flagDebugMode)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer helheimServer.Defer()
 
-	err = helheimServer.Run()
-	if err != nil {
-		log.Fatal(err)
-	}
+	go func() {
+		err = helheimServer.Run()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	<-exit
 }
