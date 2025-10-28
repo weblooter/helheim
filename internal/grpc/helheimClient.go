@@ -50,8 +50,8 @@ func (g *HelheimClient) UploadFile(scanDir string, action entity.FileAction, fil
 			Action:   gen.FileActionEnum_ACTION_DELETE,
 			Filepath: file.Filepath,
 		}
-		if err := stream.Send(req); err != nil {
-			return fmt.Errorf("UploadFile failed to send chunk: %v", err)
+		if err = stream.Send(req); err != nil {
+			return fmt.Errorf("UploadFile \"%v\" failed to send chunk: %v", file.Filepath, err)
 		}
 		break
 	case action == entity.FileActionCreated || action == entity.FileActionUpdated:
@@ -65,14 +65,21 @@ func (g *HelheimClient) UploadFile(scanDir string, action entity.FileAction, fil
 		}
 		defer f.Close()
 
-		// Подготовим общие данные для отправки
 		totalChunks := (int64(file.Size) + g.chunkSize - 1) / g.chunkSize
+		if totalChunks == 0 {
+			// Костыль для файлов с пустым контентом, к примеру .gitkeep
+			// Согласно логике у пустого файла кол-во батчей будет равно 0, но
+			// первый отправленный батч помечается как #1, что вызывает ошибку
+			// на стороне slave. Для этого и размещен тут этот костыль
+			totalChunks++
+		}
+
 		var reqAction gen.FileActionEnum
-		switch action {
-		case entity.FileActionCreated:
-			reqAction = gen.FileActionEnum_ACTION_CREATE
-		case entity.FileActionUpdated:
+		switch {
+		case action == entity.FileActionUpdated:
 			reqAction = gen.FileActionEnum_ACTION_UPDATE
+		case action == entity.FileActionCreated:
+			reqAction = gen.FileActionEnum_ACTION_CREATE
 		}
 
 		// Начнем чтение файла и его отправку батчами
@@ -82,10 +89,16 @@ func (g *HelheimClient) UploadFile(scanDir string, action entity.FileAction, fil
 			chunkIndex++
 			n, err := f.Read(buffer)
 			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				return err
+				// Ошибка io.EOF обозначает, что мы достигли конца файла при чтении.
+				// Но в случае, если файл сразу должен быть пустым (к примеру
+				// .gitkeep) нам нужно отправить хотя бы 1 запрос в UploadFile,
+				// иначе будет ошибка. Костыль ниже гарантирует, что запрос точно
+				// будет отправлен.
+				if chunkIndex > 1 {
+					break
+				}
+			} else if err != nil {
+				return fmt.Errorf("UploadFile read file failed: %v", err)
 			}
 
 			chunkHash := fmt.Sprintf("%x", sha256.Sum256(buffer[:n]))
@@ -100,8 +113,8 @@ func (g *HelheimClient) UploadFile(scanDir string, action entity.FileAction, fil
 				ChunkHashSum: chunkHash,
 				FileHashSum:  file.HashSum,
 			}
-			if err := stream.Send(req); err != nil {
-				return fmt.Errorf("UploadFile failed to send chunk: %v", err)
+			if err = stream.Send(req); err != nil {
+				return fmt.Errorf("UploadFile \"%v\" failed to send chunk: %v", file.Filepath, err)
 			}
 		}
 		break
@@ -110,11 +123,11 @@ func (g *HelheimClient) UploadFile(scanDir string, action entity.FileAction, fil
 	// Закроем стрим и проверим результат на наличие ошибок
 	resp, err := stream.CloseAndRecv()
 	if err != nil {
-		return fmt.Errorf("UploadFile close stream failed: %v", err)
+		return fmt.Errorf("UploadFile \"%v\" close stream failed: %v", file.Filepath, err)
 	}
 
 	if resp.Error != "" {
-		return fmt.Errorf("UploadFile resp error: %v", resp.Error)
+		return fmt.Errorf("UploadFile \"%v\" resp error: %v", file.Filepath, resp.Error)
 	}
 
 	return nil

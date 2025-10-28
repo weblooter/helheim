@@ -104,12 +104,12 @@ func main() {
 
 					err = helheimClient.UploadFile(flagScanDir, action, *file)
 					if err != nil {
-						log.Fatal(err)
+						log.Println(err)
 					}
 
 					err = scan.CommitFile(action, filepathHash)
 					if err != nil {
-						log.Fatal(err)
+						log.Println(err)
 					}
 				}
 			}

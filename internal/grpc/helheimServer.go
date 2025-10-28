@@ -29,7 +29,7 @@ type HelheimServer struct {
 }
 
 // NewHelheimServer создает экземпляр сервера
-func NewHelheimServer(port uint, syncDir string, isDebugMode bool) (*HelheimServer, error) {
+func NewHelheimServer(port uint, syncDir string, isDebugMode bool, butchSize int) (*HelheimServer, error) {
 	if _, err := os.Stat(syncDir); err != nil {
 		return nil, fmt.Errorf("sync dir %s does not exist", syncDir)
 	}
@@ -45,7 +45,10 @@ func NewHelheimServer(port uint, syncDir string, isDebugMode bool) (*HelheimServ
 	}
 
 	g := HelheimServer{
-		server:      grpc.NewServer(),
+		server: grpc.NewServer(
+			grpc.MaxRecvMsgSize((butchSize+5)*1024*1024),
+			grpc.MaxSendMsgSize((butchSize+5)*1024*1024),
+		),
 		listener:    lis,
 		syncDir:     syncDir,
 		tmpDir:      tmpDir,
