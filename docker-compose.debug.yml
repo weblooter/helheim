@@ -1,0 +1,25 @@
+services:
+  ### master ###
+  master:
+    build:
+      context: ./
+      args:
+        - PUID=${USER_ID}
+        - PGID=${GROUP_ID}
+        - TZ=${TIMEZONE}
+    volumes:
+      - ${MASTER_DIR}:/var/sync
+    command: "/app/master -dir=/var/sync -chunkSize=${MASTER_BUTCH_SIZE_MB} -interval=${MASTER_INTERVAL_SEC} -addr=${MASTER_ADDR} -vv"
+    restart: always
+  ### slave ###
+  slave:
+    build:
+      context: ./
+      args:
+        - PUID=${USER_ID}
+        - PGID=${GROUP_ID}
+        - TZ=${TIMEZONE}
+    volumes:
+      - ${SLAVE_DIR}:/var/sync
+    command: "/app/slave -dir=/var/sync -chunkSize=${SLAVE_BUTCH_SIZE_MB} -port=${SLAVE_PORT} -vv"
+    restart: always
