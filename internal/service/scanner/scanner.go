@@ -25,9 +25,9 @@ func NewScanner(dir string) Scanner {
 		dir:   dir,
 		state: make(entity.FilesStruct),
 		lastChanges: map[entity.FileAction]entity.FilesStruct{
-			entity.FileActionCreated: entity.FilesStruct{},
-			entity.FileActionUpdated: entity.FilesStruct{},
-			entity.FileActionDeleted: entity.FilesStruct{},
+			entity.FileActionCreated: {},
+			entity.FileActionUpdated: {},
+			entity.FileActionDeleted: {},
 		},
 	}
 }
@@ -72,12 +72,6 @@ func (s *Scanner) rescanWalkDir(path string, d fs.DirEntry, err error) error {
 		// Отметим файл в обработанных, что бы потом по ним найти удаленные
 		s.lastProcessedFiles = append(s.lastProcessedFiles, filepathHash)
 
-		// получаем информацию о файлк
-		fInfo, err := d.Info()
-		if err != nil {
-			return err
-		}
-
 		// получим хэш сумму контента файла
 		f, err := os.Open(path)
 		if err != nil {
@@ -100,17 +94,14 @@ func (s *Scanner) rescanWalkDir(path string, d fs.DirEntry, err error) error {
 
 		// описываем файл
 		researchFile := entity.File{
-			Filepath:     relativeFilepath,
-			LastModified: fInfo.ModTime().UTC(),
-			Size:         uint(fInfo.Size()),
-			HashSum:      fmt.Sprintf("%x", hashSum.Sum(nil)),
+			Filepath: relativeFilepath,
+			HashSum:  fmt.Sprintf("%x", hashSum.Sum(nil)),
 		}
 
 		// проверяем существование описанного файла в текущем состоянии
 		if currentFileState, ok := s.state[filepathHash]; ok {
 			// файл существует, проверим не измениялся ли он
-			if researchFile.LastModified.After(currentFileState.LastModified) ||
-				researchFile.HashSum != currentFileState.HashSum {
+			if researchFile.HashSum != currentFileState.HashSum {
 				// изменялся
 				s.state[filepathHash] = &researchFile
 				s.lastChanges[entity.FileActionUpdated][filepathHash] = &researchFile

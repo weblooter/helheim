@@ -14,10 +14,9 @@ import (
 	"weblooter/helheim/internal/service/scanner"
 
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-type HelheimServer struct {
+type server struct {
 	gen.UnimplementedHelheimServer
 	server      *grpc.Server
 	listener    net.Listener
@@ -27,8 +26,8 @@ type HelheimServer struct {
 	isDebugMode bool
 }
 
-// NewHelheimServer создает экземпляр сервера
-func NewHelheimServer(port uint, syncDir string, isDebugMode bool, butchSize int) (*HelheimServer, error) {
+// NewServer создает экземпляр сервера
+func NewServer(port uint, syncDir string, isDebugMode bool, butchSize int) (*server, error) {
 	if _, err := os.Stat(syncDir); err != nil {
 		return nil, fmt.Errorf("sync dir %s does not exist", syncDir)
 	}
@@ -43,7 +42,7 @@ func NewHelheimServer(port uint, syncDir string, isDebugMode bool, butchSize int
 		return nil, fmt.Errorf("failed to create temp dir: %v", err)
 	}
 
-	g := HelheimServer{
+	g := server{
 		server: grpc.NewServer(
 			grpc.MaxRecvMsgSize((butchSize+5)*1024*1024),
 			grpc.MaxSendMsgSize((butchSize+5)*1024*1024),
@@ -60,7 +59,7 @@ func NewHelheimServer(port uint, syncDir string, isDebugMode bool, butchSize int
 }
 
 // Run запуск gRPC сервера
-func (s *HelheimServer) Run() error {
+func (s *server) Run() error {
 	if err := s.server.Serve(s.listener); err != nil {
 		return fmt.Errorf("failed to serve: %v", err)
 	}
@@ -69,19 +68,19 @@ func (s *HelheimServer) Run() error {
 
 // Defer функция, которая удаляте временную директорию,
 // в которую складывались передаваемые файлы
-func (s *HelheimServer) Defer() {
+func (s *server) Defer() {
 	os.RemoveAll(s.tmpDir)
 }
 
 // UploadFile метод принятия загружаемый файлов от мастера
-func (s *HelheimServer) UploadFile(stream gen.Helheim_UploadFileServer) error {
+func (s *server) UploadFile(stream gen.Helheim_UploadFileServer) error {
 	var chunkFilepath *string
 	var action *gen.FileActionEnum
 	var tmpF *os.File
 	var fileContentHashSum string
 	tmpFileContentHash := sha256.New()
-	var totalChunks int64
-	var lastChunkIndex int64
+	var chunkMax int64
+	var chunkNum int64
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -107,7 +106,7 @@ func (s *HelheimServer) UploadFile(stream gen.Helheim_UploadFileServer) error {
 					return err
 				}
 				if s.isDebugMode {
-					message.InfoF("Файл \"%s\" удален.\n", *chunkFilepath)
+					message.Info("Done\n")
 				}
 
 			case *action == gen.FileActionEnum_ACTION_CREATE || *action == gen.FileActionEnum_ACTION_UPDATE:
@@ -115,8 +114,8 @@ func (s *HelheimServer) UploadFile(stream gen.Helheim_UploadFileServer) error {
 				defer tmpF.Close()
 
 				// Сверим корректность данных
-				if lastChunkIndex != totalChunks {
-					err = fmt.Errorf("number of the last chunk is #%d, but it must be #%d", lastChunkIndex, totalChunks)
+				if chunkNum != chunkMax {
+					err = fmt.Errorf("number of the last chunk is #%d, but it must be #%d", chunkNum, chunkMax)
 					message.ThrowFatal(err.Error())
 					return err
 				}
@@ -150,7 +149,7 @@ func (s *HelheimServer) UploadFile(stream gen.Helheim_UploadFileServer) error {
 						return err
 					}
 					if s.isDebugMode {
-						message.InfoF("Файл \"%s\" создан.\n", *chunkFilepath)
+						message.Info("Done\n")
 					}
 				} else if *action == gen.FileActionEnum_ACTION_UPDATE {
 					// Обновим файл
@@ -185,7 +184,7 @@ func (s *HelheimServer) UploadFile(stream gen.Helheim_UploadFileServer) error {
 						return err
 					}
 					if s.isDebugMode {
-						message.InfoF("Файл \"%s\" обновлен.\n", *chunkFilepath)
+						message.Info("Done\n")
 					}
 
 				}
@@ -209,8 +208,8 @@ func (s *HelheimServer) UploadFile(stream gen.Helheim_UploadFileServer) error {
 		if fileContentHashSum == "" {
 			fileContentHashSum = req.FileHashSum
 		}
-		if totalChunks == 0 {
-			totalChunks = req.TotalChunks
+		if chunkMax == 0 {
+			chunkMax = req.ChunkMax
 		}
 
 		// Создадим временный файл для записи в него контента чанков
@@ -222,17 +221,17 @@ func (s *HelheimServer) UploadFile(stream gen.Helheim_UploadFileServer) error {
 			defer os.Remove(tmpF.Name())
 		}
 
-		lastChunkIndex = req.ChunkIndex
+		chunkNum = req.ChunkNum
 
 		if s.isDebugMode {
-			mgs := fmt.Sprintf("Filepath: %v, ChunkIndex: %v, TotalChunks: %v", *chunkFilepath, req.ChunkIndex, req.TotalChunks)
+			mgs := fmt.Sprintf("Filepath: %v, ChunkNum: %v, ChunkMax: %v", *chunkFilepath, req.ChunkNum, req.ChunkMax)
 			switch *action {
 			case gen.FileActionEnum_ACTION_DELETE:
-				message.FlushDanger(mgs)
+				message.FlushDanger("[D] " + mgs)
 			case gen.FileActionEnum_ACTION_UPDATE:
-				message.FlushWarning(mgs)
+				message.FlushWarning("[U] " + mgs)
 			case gen.FileActionEnum_ACTION_CREATE:
-				message.FlushSuccess(mgs)
+				message.FlushSuccess("[C] " + mgs)
 			}
 		}
 
@@ -243,7 +242,7 @@ func (s *HelheimServer) UploadFile(stream gen.Helheim_UploadFileServer) error {
 			// Сверим хэш сумму чанка
 			chunkHash := fmt.Sprintf("%x", sha256.Sum256(req.ChunkContent))
 			if chunkHash != req.ChunkHashSum {
-				return fmt.Errorf("Chink #%d hash sum not equil: %x != %x ", req.ChunkIndex, chunkHash, req.ChunkHashSum)
+				return fmt.Errorf("Chunk #%d hash sum not equil: %x != %x ", req.ChunkNum, chunkHash, req.ChunkHashSum)
 			}
 
 			tmpFileContentHash.Write(req.ChunkContent)
@@ -257,7 +256,7 @@ func (s *HelheimServer) UploadFile(stream gen.Helheim_UploadFileServer) error {
 }
 
 // GetState собирает информацию о текущей структуре для мастера
-func (s *HelheimServer) GetState(_ context.Context, _ *gen.GetStateRequest) (*gen.GetStateResponse, error) {
+func (s *server) GetState(_ context.Context, _ *gen.GetStateRequest) (*gen.GetStateResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -271,9 +270,7 @@ func (s *HelheimServer) GetState(_ context.Context, _ *gen.GetStateRequest) (*ge
 	for h, f := range scan.GetState() {
 		files[h] = &gen.GetStateResponseItem{
 			Filepath:       f.Filepath,
-			Size:           int64(f.Size),
 			ContentHashSum: f.HashSum,
-			LastModified:   timestamppb.New(f.LastModified),
 		}
 	}
 

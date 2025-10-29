@@ -55,7 +55,7 @@ func main() {
 		fmt.Println()
 	}
 
-	helheimClient, err := grpc.NewHelheimClient(flagServerAddr, flagButchSize)
+	client, err := grpc.NewClient(flagServerAddr, flagButchSize)
 	if err != nil {
 		message.ThrowFatal(err.Error())
 		os.Exit(1)
@@ -63,7 +63,7 @@ func main() {
 
 	scan := scanner.NewScanner(flagScanDir)
 
-	slaveState, err := helheimClient.GetState()
+	slaveState, err := client.GetState()
 	if err != nil {
 		message.ThrowFatal(err.Error())
 		os.Exit(1)
@@ -105,7 +105,7 @@ func main() {
 
 				for filepathHash, file := range files {
 
-					err = helheimClient.UploadFile(flagScanDir, action, *file)
+					err = client.UploadFile(flagScanDir, action, *file)
 					if err != nil {
 						message.ThrowFatal(err.Error())
 						continue

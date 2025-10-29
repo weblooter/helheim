@@ -19,17 +19,15 @@ enum FileActionEnum {
 message UploadFileChunkRequest {
   FileActionEnum action = 1;
   string filepath = 2;
-  int64 size = 3;
-  bytes chunk_content = 4;
-  int64 chunk_index = 5;
-  int64 total_chunks = 6;
-  string chunk_hash_sum = 7;
-  string file_hash_sum = 8;
+  bytes chunk_content = 3;
+  int64 chunk_num = 4;
+  int64 chunk_max = 5;
+  string chunk_hash_sum = 6;
+  string file_hash_sum = 7;
 }
 
 message UploadFileResponse {
   bool done = 1;
-  string error = 2;
 }
 
 message GetStateRequest {
@@ -41,7 +39,5 @@ message GetStateResponse {
 
 message GetStateResponseItem {
   string filepath = 1;
-  int64 size = 2;
-  string content_hash_sum = 3;
-  google.protobuf.Timestamp last_modified = 4;
+  string content_hash_sum = 2;
 }

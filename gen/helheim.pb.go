@@ -9,7 +9,7 @@ package gen
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	_ "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -78,12 +78,11 @@ type UploadFileChunkRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Action        FileActionEnum         `protobuf:"varint,1,opt,name=action,proto3,enum=FileActionEnum" json:"action,omitempty"`
 	Filepath      string                 `protobuf:"bytes,2,opt,name=filepath,proto3" json:"filepath,omitempty"`
-	Size          int64                  `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"`
-	ChunkContent  []byte                 `protobuf:"bytes,4,opt,name=chunk_content,json=chunkContent,proto3" json:"chunk_content,omitempty"`
-	ChunkIndex    int64                  `protobuf:"varint,5,opt,name=chunk_index,json=chunkIndex,proto3" json:"chunk_index,omitempty"`
-	TotalChunks   int64                  `protobuf:"varint,6,opt,name=total_chunks,json=totalChunks,proto3" json:"total_chunks,omitempty"`
-	ChunkHashSum  string                 `protobuf:"bytes,7,opt,name=chunk_hash_sum,json=chunkHashSum,proto3" json:"chunk_hash_sum,omitempty"`
-	FileHashSum   string                 `protobuf:"bytes,8,opt,name=file_hash_sum,json=fileHashSum,proto3" json:"file_hash_sum,omitempty"`
+	ChunkContent  []byte                 `protobuf:"bytes,3,opt,name=chunk_content,json=chunkContent,proto3" json:"chunk_content,omitempty"`
+	ChunkNum      int64                  `protobuf:"varint,4,opt,name=chunk_num,json=chunkNum,proto3" json:"chunk_num,omitempty"`
+	ChunkMax      int64                  `protobuf:"varint,5,opt,name=chunk_max,json=chunkMax,proto3" json:"chunk_max,omitempty"`
+	ChunkHashSum  string                 `protobuf:"bytes,6,opt,name=chunk_hash_sum,json=chunkHashSum,proto3" json:"chunk_hash_sum,omitempty"`
+	FileHashSum   string                 `protobuf:"bytes,7,opt,name=file_hash_sum,json=fileHashSum,proto3" json:"file_hash_sum,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -132,13 +131,6 @@ func (x *UploadFileChunkRequest) GetFilepath() string {
 	return ""
 }
 
-func (x *UploadFileChunkRequest) GetSize() int64 {
-	if x != nil {
-		return x.Size
-	}
-	return 0
-}
-
 func (x *UploadFileChunkRequest) GetChunkContent() []byte {
 	if x != nil {
 		return x.ChunkContent
@@ -146,16 +138,16 @@ func (x *UploadFileChunkRequest) GetChunkContent() []byte {
 	return nil
 }
 
-func (x *UploadFileChunkRequest) GetChunkIndex() int64 {
+func (x *UploadFileChunkRequest) GetChunkNum() int64 {
 	if x != nil {
-		return x.ChunkIndex
+		return x.ChunkNum
 	}
 	return 0
 }
 
-func (x *UploadFileChunkRequest) GetTotalChunks() int64 {
+func (x *UploadFileChunkRequest) GetChunkMax() int64 {
 	if x != nil {
-		return x.TotalChunks
+		return x.ChunkMax
 	}
 	return 0
 }
@@ -177,7 +169,6 @@ func (x *UploadFileChunkRequest) GetFileHashSum() string {
 type UploadFileResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Done          bool                   `protobuf:"varint,1,opt,name=done,proto3" json:"done,omitempty"`
-	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -217,13 +208,6 @@ func (x *UploadFileResponse) GetDone() bool {
 		return x.Done
 	}
 	return false
-}
-
-func (x *UploadFileResponse) GetError() string {
-	if x != nil {
-		return x.Error
-	}
-	return ""
 }
 
 type GetStateRequest struct {
@@ -309,9 +293,7 @@ func (x *GetStateResponse) GetFiles() map[string]*GetStateResponseItem {
 type GetStateResponseItem struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Filepath       string                 `protobuf:"bytes,1,opt,name=filepath,proto3" json:"filepath,omitempty"`
-	Size           int64                  `protobuf:"varint,2,opt,name=size,proto3" json:"size,omitempty"`
-	ContentHashSum string                 `protobuf:"bytes,3,opt,name=content_hash_sum,json=contentHashSum,proto3" json:"content_hash_sum,omitempty"`
-	LastModified   *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=last_modified,json=lastModified,proto3" json:"last_modified,omitempty"`
+	ContentHashSum string                 `protobuf:"bytes,2,opt,name=content_hash_sum,json=contentHashSum,proto3" json:"content_hash_sum,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -353,13 +335,6 @@ func (x *GetStateResponseItem) GetFilepath() string {
 	return ""
 }
 
-func (x *GetStateResponseItem) GetSize() int64 {
-	if x != nil {
-		return x.Size
-	}
-	return 0
-}
-
 func (x *GetStateResponseItem) GetContentHashSum() string {
 	if x != nil {
 		return x.ContentHashSum
@@ -367,43 +342,31 @@ func (x *GetStateResponseItem) GetContentHashSum() string {
 	return ""
 }
 
-func (x *GetStateResponseItem) GetLastModified() *timestamppb.Timestamp {
-	if x != nil {
-		return x.LastModified
-	}
-	return nil
-}
-
 var File_helheim_proto protoreflect.FileDescriptor
 
 const file_helheim_proto_rawDesc = "" +
 	"\n" +
-	"\rhelheim.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa4\x02\n" +
+	"\rhelheim.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x86\x02\n" +
 	"\x16UploadFileChunkRequest\x12'\n" +
 	"\x06action\x18\x01 \x01(\x0e2\x0f.FileActionEnumR\x06action\x12\x1a\n" +
-	"\bfilepath\x18\x02 \x01(\tR\bfilepath\x12\x12\n" +
-	"\x04size\x18\x03 \x01(\x03R\x04size\x12#\n" +
-	"\rchunk_content\x18\x04 \x01(\fR\fchunkContent\x12\x1f\n" +
-	"\vchunk_index\x18\x05 \x01(\x03R\n" +
-	"chunkIndex\x12!\n" +
-	"\ftotal_chunks\x18\x06 \x01(\x03R\vtotalChunks\x12$\n" +
-	"\x0echunk_hash_sum\x18\a \x01(\tR\fchunkHashSum\x12\"\n" +
-	"\rfile_hash_sum\x18\b \x01(\tR\vfileHashSum\">\n" +
+	"\bfilepath\x18\x02 \x01(\tR\bfilepath\x12#\n" +
+	"\rchunk_content\x18\x03 \x01(\fR\fchunkContent\x12\x1b\n" +
+	"\tchunk_num\x18\x04 \x01(\x03R\bchunkNum\x12\x1b\n" +
+	"\tchunk_max\x18\x05 \x01(\x03R\bchunkMax\x12$\n" +
+	"\x0echunk_hash_sum\x18\x06 \x01(\tR\fchunkHashSum\x12\"\n" +
+	"\rfile_hash_sum\x18\a \x01(\tR\vfileHashSum\"(\n" +
 	"\x12UploadFileResponse\x12\x12\n" +
-	"\x04done\x18\x01 \x01(\bR\x04done\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05error\"\x11\n" +
+	"\x04done\x18\x01 \x01(\bR\x04done\"\x11\n" +
 	"\x0fGetStateRequest\"\x97\x01\n" +
 	"\x10GetStateResponse\x122\n" +
 	"\x05files\x18\x01 \x03(\v2\x1c.GetStateResponse.FilesEntryR\x05files\x1aO\n" +
 	"\n" +
 	"FilesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12+\n" +
-	"\x05value\x18\x02 \x01(\v2\x15.GetStateResponseItemR\x05value:\x028\x01\"\xb1\x01\n" +
+	"\x05value\x18\x02 \x01(\v2\x15.GetStateResponseItemR\x05value:\x028\x01\"\\\n" +
 	"\x14GetStateResponseItem\x12\x1a\n" +
-	"\bfilepath\x18\x01 \x01(\tR\bfilepath\x12\x12\n" +
-	"\x04size\x18\x02 \x01(\x03R\x04size\x12(\n" +
-	"\x10content_hash_sum\x18\x03 \x01(\tR\x0econtentHashSum\x12?\n" +
-	"\rlast_modified\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\flastModified*^\n" +
+	"\bfilepath\x18\x01 \x01(\tR\bfilepath\x12(\n" +
+	"\x10content_hash_sum\x18\x02 \x01(\tR\x0econtentHashSum*^\n" +
 	"\x0eFileActionEnum\x12\x13\n" +
 	"\x0fACTION__UNKNOWN\x10\x00\x12\x11\n" +
 	"\rACTION_CREATE\x10\x01\x12\x11\n" +
@@ -436,22 +399,20 @@ var file_helheim_proto_goTypes = []any{
 	(*GetStateResponse)(nil),       // 4: GetStateResponse
 	(*GetStateResponseItem)(nil),   // 5: GetStateResponseItem
 	nil,                            // 6: GetStateResponse.FilesEntry
-	(*timestamppb.Timestamp)(nil),  // 7: google.protobuf.Timestamp
 }
 var file_helheim_proto_depIdxs = []int32{
 	0, // 0: UploadFileChunkRequest.action:type_name -> FileActionEnum
 	6, // 1: GetStateResponse.files:type_name -> GetStateResponse.FilesEntry
-	7, // 2: GetStateResponseItem.last_modified:type_name -> google.protobuf.Timestamp
-	5, // 3: GetStateResponse.FilesEntry.value:type_name -> GetStateResponseItem
-	1, // 4: Helheim.UploadFile:input_type -> UploadFileChunkRequest
-	3, // 5: Helheim.GetState:input_type -> GetStateRequest
-	2, // 6: Helheim.UploadFile:output_type -> UploadFileResponse
-	4, // 7: Helheim.GetState:output_type -> GetStateResponse
-	6, // [6:8] is the sub-list for method output_type
-	4, // [4:6] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	5, // 2: GetStateResponse.FilesEntry.value:type_name -> GetStateResponseItem
+	1, // 3: Helheim.UploadFile:input_type -> UploadFileChunkRequest
+	3, // 4: Helheim.GetState:input_type -> GetStateRequest
+	2, // 5: Helheim.UploadFile:output_type -> UploadFileResponse
+	4, // 6: Helheim.GetState:output_type -> GetStateResponse
+	5, // [5:7] is the sub-list for method output_type
+	3, // [3:5] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_helheim_proto_init() }

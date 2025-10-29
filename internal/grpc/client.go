@@ -13,20 +13,20 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-type HelheimClient struct {
+type Client struct {
 	conn      *grpc.ClientConn
 	client    gen.HelheimClient
 	chunkSize int64
 }
 
-// NewHelheimClient получить новый экземпляр клиента
-func NewHelheimClient(serverAddr string, butchSize int) (*HelheimClient, error) {
+// NewClient получить новый экземпляр клиента
+func NewClient(serverAddr string, butchSize int) (*Client, error) {
 	conn, err := grpc.NewClient(serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		return nil, fmt.Errorf("grpc NewHelheimClient connect failed: %v", err)
+		return nil, fmt.Errorf("grpc NewClient connect failed: %v", err)
 	}
 
-	g := &HelheimClient{
+	g := &Client{
 		conn:      conn,
 		client:    gen.NewHelheimClient(conn),
 		chunkSize: 1024 * 1024 * int64(butchSize),
@@ -35,7 +35,7 @@ func NewHelheimClient(serverAddr string, butchSize int) (*HelheimClient, error) 
 }
 
 // UploadFile загрузка в получателя файла с признаком события
-func (g *HelheimClient) UploadFile(scanDir string, action entity.FileAction, file entity.File) error {
+func (g *Client) UploadFile(scanDir string, action entity.FileAction, file entity.File) error {
 	stream, err := g.client.UploadFile(context.Background())
 	if err != nil {
 		return fmt.Errorf("UploadFile open stream failed: %v", err)
@@ -64,14 +64,14 @@ func (g *HelheimClient) UploadFile(scanDir string, action entity.FileAction, fil
 			return fmt.Errorf("UploadFile open file failed: %v", err)
 		}
 		defer f.Close()
+		fStat, err := f.Stat()
+		if err != nil {
+			return fmt.Errorf("UploadFile stat file failed: %v", err)
+		}
 
-		totalChunks := (int64(file.Size) + g.chunkSize - 1) / g.chunkSize
-		if totalChunks == 0 {
-			// Костыль для файлов с пустым контентом, к примеру .gitkeep
-			// Согласно логике у пустого файла кол-во батчей будет равно 0, но
-			// первый отправленный батч помечается как #1, что вызывает ошибку
-			// на стороне slave. Для этого и размещен тут этот костыль
-			totalChunks++
+		chunkMax := (fStat.Size() + g.chunkSize - 1) / g.chunkSize
+		if chunkMax == 0 {
+			chunkMax = 1
 		}
 
 		var reqAction gen.FileActionEnum
@@ -84,9 +84,9 @@ func (g *HelheimClient) UploadFile(scanDir string, action entity.FileAction, fil
 
 		// Начнем чтение файла и его отправку батчами
 		buffer := make([]byte, g.chunkSize)
-		chunkIndex := int64(0)
+		chunkNum := int64(0)
 		for {
-			chunkIndex++
+			chunkNum++
 			n, err := f.Read(buffer)
 			if err == io.EOF {
 				// Ошибка io.EOF обозначает, что мы достигли конца файла при чтении.
@@ -94,7 +94,7 @@ func (g *HelheimClient) UploadFile(scanDir string, action entity.FileAction, fil
 				// .gitkeep) нам нужно отправить хотя бы 1 запрос в UploadFile,
 				// иначе будет ошибка. Костыль ниже гарантирует, что запрос точно
 				// будет отправлен.
-				if chunkIndex > 1 {
+				if chunkNum > 1 {
 					break
 				}
 			} else if err != nil {
@@ -106,10 +106,9 @@ func (g *HelheimClient) UploadFile(scanDir string, action entity.FileAction, fil
 			req := &gen.UploadFileChunkRequest{
 				Action:       reqAction,
 				Filepath:     file.Filepath,
-				Size:         int64(file.Size),
 				ChunkContent: buffer[:n],
-				ChunkIndex:   chunkIndex,
-				TotalChunks:  totalChunks,
+				ChunkNum:     chunkNum,
+				ChunkMax:     chunkMax,
 				ChunkHashSum: chunkHash,
 				FileHashSum:  file.HashSum,
 			}
@@ -126,28 +125,26 @@ func (g *HelheimClient) UploadFile(scanDir string, action entity.FileAction, fil
 		return fmt.Errorf("UploadFile \"%v\" close stream failed: %v", file.Filepath, err)
 	}
 
-	if resp.Error != "" {
-		return fmt.Errorf("UploadFile \"%v\" resp error: %v", file.Filepath, resp.Error)
+	if resp.Done != true {
+		return fmt.Errorf("UploadFile \"%v\" resp error: file not done", file.Filepath)
 	}
 
 	return nil
 }
 
 // GetState
-func (g *HelheimClient) GetState() (entity.FilesStruct, error) {
+func (g *Client) GetState() (entity.FilesStruct, error) {
 	req := &gen.GetStateRequest{}
 	resp, err := g.client.GetState(context.Background(), req)
 	if err != nil {
-		return entity.FilesStruct{}, fmt.Errorf("HelheimClient GetState call failed: %v", err)
+		return entity.FilesStruct{}, fmt.Errorf("Client GetState call failed: %v", err)
 	}
 
 	state := entity.FilesStruct{}
 	for h, f := range resp.Files {
 		state[h] = &entity.File{
-			Filepath:     f.Filepath,
-			Size:         uint(f.Size),
-			LastModified: f.LastModified.AsTime().UTC(),
-			HashSum:      f.ContentHashSum,
+			Filepath: f.Filepath,
+			HashSum:  f.ContentHashSum,
 		}
 	}
 	return state, nil

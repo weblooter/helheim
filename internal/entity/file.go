@@ -1,7 +1,5 @@
 package entity
 
-import "time"
-
 type FileAction string
 
 const (
@@ -11,10 +9,8 @@ const (
 )
 
 type File struct {
-	Filepath     string
-	LastModified time.Time
-	Size         uint
-	HashSum      string
+	Filepath string
+	HashSum  string
 }
 
 type FilesStruct map[string]*File

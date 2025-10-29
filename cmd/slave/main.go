@@ -53,15 +53,15 @@ func main() {
 		exit <- true
 	}()
 
-	helheimServer, err := grpc.NewHelheimServer(flagPort, flagSyncDir, flagDebugMode, flagButchSize)
+	server, err := grpc.NewServer(flagPort, flagSyncDir, flagDebugMode, flagButchSize)
 	if err != nil {
 		message.ThrowFatal(err.Error())
 		os.Exit(1)
 	}
-	defer helheimServer.Defer()
+	defer server.Defer()
 
 	go func() {
-		err = helheimServer.Run()
+		err = server.Run()
 		if err != nil {
 			message.ThrowFatal(err.Error())
 			os.Exit(1)
