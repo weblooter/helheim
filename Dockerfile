@@ -3,8 +3,8 @@ FROM golang:1.25-alpine AS buildergo
 
 WORKDIR /app
 COPY ./ ./
-RUN go build -o /app/master ./cmd/master/main.go
-RUN go build -o /app/slave ./cmd/slave/main.go
+RUN go build -o /app/helheim-master ./cmd/helheim-master/main.go
+RUN go build -o /app/helheim-slave ./cmd/helheim-slave/main.go
 
 
 # ========= APP =========
@@ -26,8 +26,8 @@ RUN groupadd -g $PGID app && \
 
 # files
 WORKDIR /app
-COPY --from=buildergo /app/master /app/master
-COPY --from=buildergo /app/slave /app/slave
+COPY --from=buildergo /app/helheim-master /app/helheim-master
+COPY --from=buildergo /app/helheim-slave /app/helheim-slave
 RUN mkdir -p /var/sync && chown -R $PUID:$PGID /var/sync
 
 # run

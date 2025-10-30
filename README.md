@@ -14,8 +14,9 @@
 # Оглавление
 
 - [Фичи](#features)
+- [Установка](#установка)
 - [Запуск](#запуск)
-- [Установка как приложение](#установка)
+- [Запуск через docker compose](#запуск-через-docker-compose)
 - [Зависимости](#dependencies)
 
 # Features
@@ -36,24 +37,25 @@
 - Рассчитан на условия ресурсного голода. В зависимости от размера файловой структуры `master` для полноценной работы
   потребляет до `5MB` оперативной памяти, `slave` - до `10MB`
 
-# Запуск
+# Установка
 
-Возможен как [ручной запуск](#ручной-запуск), так и [запуск через docker compose](#запуск-через-docker-compose)
-
-## Ручной запуск
-
-Для самостоятельного запуска необходимо произвести билд приложений
+Установка как приложение:
 
 ```bash
-cd app
-go build -o master cmd/master/main.go
-go build -o slave cmd/slave/main.go
+# Установить master
+go install github.com/weblooter/helheim/cmd/helheim-master@latest
+
+# Установить slave
+go install github.com/weblooter/helheim/cmd/helheim-slave@latest
 ```
 
-### Запуск `master`
+# Запуск
+
+## Запуск `master`
 
 ```bash
-./master -dir=/dir/source -interval=30 -chunkSize=5 -addr=127.0.0.1:50051 -vv
+# by default in ~/go/bin/
+helheim-master -dir=/dir/source -interval=30 -chunkSize=5 -addr=127.0.0.1:50051 -vv
 ```
 
 Описание флагов:
@@ -64,10 +66,11 @@ go build -o slave cmd/slave/main.go
 - `addr` - адрес получателя (gRPC server) в формате "HOST:PORT"
 - `vv` - включение режима полного дебага
 
-### Запуск `slave`
+## Запуск `slave`
 
 ```bash
-./slave -dir=/dir/dest -chunkSize=5 -port=50051 -vv
+# by default in ~/go/bin/
+helheim-slave -dir=/dir/dest -chunkSize=5 -port=50051 -vv
 ```
 
 Описание флагов:
@@ -77,12 +80,12 @@ go build -o slave cmd/slave/main.go
 - `port` - порт gRPC сервера
 - `vv` - включение режима полного дебага
 
-### Сбор логов
+## Сбор логов
 
 Для сбора логов о критических ошибках можно `> /var/my-logs.txt`. Не рекомендуется включать режим полного дебага в
 продуктовой среде.
 
-## Запуск через `docker compose`
+# Запуск через `docker compose`
 
 Скопируйте и внесите изменения в `.env.example`
 
@@ -97,7 +100,7 @@ docker compose up -d master
 docker compose up -d slave
 ```
 
-Описание флагов смотри в ["ручной запуск"](#ручной-запуск)
+Описание флагов смотри в ["Запуск"](#запуск)
 
 ### Сбор логов
 
@@ -109,18 +112,6 @@ docker compose logs slave
 ```
 
 Не рекомендуется включать режим полного дебага в продуктовой среде.
-
-# Установка
-
-Установка как приложение:
-
-```bash
-# Установить master
-go install github.com/weblooter/helheim/cmd/master@latest
-
-# Установить slave
-go install github.com/weblooter/helheim/cmd/slave@latest
-```
 
 # Dependencies
 - golang: 1.25
