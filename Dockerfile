@@ -2,7 +2,7 @@
 FROM golang:1.25-alpine AS buildergo
 
 WORKDIR /app
-COPY app/ ./
+COPY ./ ./
 RUN go build -o /app/master ./cmd/master/main.go
 RUN go build -o /app/slave ./cmd/slave/main.go
 

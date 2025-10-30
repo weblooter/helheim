@@ -1,0 +1,8 @@
+*
+!cmd/
+!gen/
+!internal/
+!protos/
+!vendor/
+!go.mod
+!go.sum
