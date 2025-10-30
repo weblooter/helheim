@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"weblooter/helheim/gen"
-	"weblooter/helheim/internal/entity"
+
+	"github.com/weblooter/helheim/gen"
+	"github.com/weblooter/helheim/internal/entity"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

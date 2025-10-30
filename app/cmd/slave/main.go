@@ -7,8 +7,9 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"weblooter/helheim/internal/assistant/message"
-	"weblooter/helheim/internal/grpc"
+
+	"github.com/weblooter/helheim/internal/assistant/message"
+	"github.com/weblooter/helheim/internal/grpc"
 )
 
 var flagSyncDir string

@@ -9,9 +9,10 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"weblooter/helheim/gen"
-	"weblooter/helheim/internal/assistant/message"
-	"weblooter/helheim/internal/service/scanner"
+
+	"github.com/weblooter/helheim/gen"
+	"github.com/weblooter/helheim/internal/assistant/message"
+	"github.com/weblooter/helheim/internal/service/scanner"
 
 	"google.golang.org/grpc"
 )

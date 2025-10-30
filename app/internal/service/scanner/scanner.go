@@ -9,7 +9,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"weblooter/helheim/internal/entity"
+
+	"github.com/weblooter/helheim/internal/entity"
 )
 
 type Scanner struct {

@@ -11,10 +11,11 @@
 
 Под событиями подразумевается `Создание`, `Изменение содержимого` и `Удаление`.
 
-## Оглавление
+# Оглавление
 
-- [Запуск](#запуск)
 - [Фичи](#features)
+- [Запуск](#запуск)
+- [Установка как приложение](#установка)
 - [Зависимости](#dependencies)
 
 # Features
@@ -108,6 +109,18 @@ docker compose logs slave
 ```
 
 Не рекомендуется включать режим полного дебага в продуктовой среде.
+
+# Установка
+
+Установка как приложение:
+
+```bash
+# Установить master
+go install github.com/weblooter/helheim/cmd/master@latest
+
+# Установить slave
+go install github.com/weblooter/helheim/cmd/slave@latest
+```
 
 # Dependencies
 - golang: 1.25

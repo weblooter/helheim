@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "weblooter/helheim/gen";
+option go_package = "github.com/weblooter/helheim/gen";
 
 service Helheim {
   rpc UploadFile(stream UploadFileChunkRequest) returns (UploadFileResponse);

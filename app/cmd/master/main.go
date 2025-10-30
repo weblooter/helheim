@@ -6,10 +6,11 @@ import (
 	"os"
 	"strings"
 	"time"
-	"weblooter/helheim/internal/assistant/message"
-	"weblooter/helheim/internal/entity"
-	"weblooter/helheim/internal/grpc"
-	"weblooter/helheim/internal/service/scanner"
+
+	"github.com/weblooter/helheim/internal/assistant/message"
+	"github.com/weblooter/helheim/internal/entity"
+	"github.com/weblooter/helheim/internal/grpc"
+	"github.com/weblooter/helheim/internal/service/scanner"
 )
 
 var flagScanIntervalSec uint

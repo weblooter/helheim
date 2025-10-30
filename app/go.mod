@@ -1,4 +1,4 @@
-module weblooter/helheim
+module github.com/weblooter/helheim
 
 go 1.25.1
 

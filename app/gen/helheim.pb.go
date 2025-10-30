@@ -375,7 +375,7 @@ const file_helheim_proto_rawDesc = "" +
 	"\aHelheim\x12<\n" +
 	"\n" +
 	"UploadFile\x12\x17.UploadFileChunkRequest\x1a\x13.UploadFileResponse(\x01\x12/\n" +
-	"\bGetState\x12\x10.GetStateRequest\x1a\x11.GetStateResponseB\x17Z\x15weblooter/helheim/genb\x06proto3"
+	"\bGetState\x12\x10.GetStateRequest\x1a\x11.GetStateResponseB\"Z github.com/weblooter/helheim/genb\x06proto3"
 
 var (
 	file_helheim_proto_rawDescOnce sync.Once
