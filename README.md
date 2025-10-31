@@ -15,6 +15,8 @@
 
 - [Фичи](#features)
 - [Установка](#установка)
+    - [через go install](#установка-через-go-install)
+    - [через goblin.run](#установка-через-goblinrun)
 - [Запуск](#запуск)
 - [Запуск через docker compose](#запуск-через-docker-compose)
 - [Зависимости](#dependencies)
@@ -39,22 +41,35 @@
 
 # Установка
 
-Установка как приложение:
+## Установка через `go install`:
 
 ```bash
-# Установить master
+# by default in ~/go/bin/helheim-master
 go install github.com/weblooter/helheim/cmd/helheim-master@latest
+~/go/bin/helheim-master -h
 
-# Установить slave
+# by default in ~/go/bin/helheim-slave
 go install github.com/weblooter/helheim/cmd/helheim-slave@latest
+~/go/bin/helheim-slave -h
 ```
+
+## Установка через [goblin.run](https://goblin.run):
+```bash
+# by default in /usr/local/bin
+curl -sf https://goblin.run/github.com/weblooter/helheim/cmd/helheim-master | sh
+helheim-master -h
+
+# by default in /usr/local/bin
+curl -sf https://goblin.run/github.com/weblooter/helheim/cmd/helheim-slave | sh 
+helheim-slave -h
+```
+
 
 # Запуск
 
 ## Запуск `master`
 
 ```bash
-# by default in ~/go/bin/
 helheim-master -dir=/dir/source -interval=30 -chunkSize=5 -addr=127.0.0.1:50051 -vv
 ```
 
@@ -69,7 +84,6 @@ helheim-master -dir=/dir/source -interval=30 -chunkSize=5 -addr=127.0.0.1:50051 
 ## Запуск `slave`
 
 ```bash
-# by default in ~/go/bin/
 helheim-slave -dir=/dir/dest -chunkSize=5 -port=50051 -vv
 ```
 
@@ -82,8 +96,7 @@ helheim-slave -dir=/dir/dest -chunkSize=5 -port=50051 -vv
 
 ## Сбор логов
 
-Для сбора логов о критических ошибках можно `> /var/my-logs.txt`. Не рекомендуется включать режим полного дебага в
-продуктовой среде.
+Для сбора логов о критических ошибках можно `> /var/my-logs.txt`. Не рекомендуется включать режим полного дебага в (`-vv`) продуктовой среде.
 
 # Запуск через `docker compose`
 
