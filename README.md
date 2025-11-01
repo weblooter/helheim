@@ -55,12 +55,10 @@ go install github.com/weblooter/helheim/cmd/helheim-slave@latest
 
 ## Установка через [goblin.run](https://goblin.run):
 ```bash
-# by default in /usr/local/bin
-curl -sf https://goblin.run/github.com/weblooter/helheim/cmd/helheim-master | sh
+curl -sf https://goblin.run/github.com/weblooter/helheim | CMD_PATH="/cmd/helheim-master" OUT=helheim-master sh
 helheim-master -h
 
-# by default in /usr/local/bin
-curl -sf https://goblin.run/github.com/weblooter/helheim/cmd/helheim-slave | sh 
+curl -sf https://goblin.run/github.com/weblooter/helheim | CMD_PATH="/cmd/helheim-slave" OUT=helheim-slave sh
 helheim-slave -h
 ```
 
